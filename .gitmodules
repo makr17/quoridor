@@ -1,0 +1,6 @@
+[submodule "erlang-color"]
+	path = erlang-color
+	url = https://github.com/julianduque/erlang-color.git
+[submodule "erlang-algorithms"]
+	path = erlang-algorithms
+	url = https://github.com/aggelgian/erlang-algorithms.git
