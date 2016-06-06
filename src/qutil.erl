@@ -75,13 +75,13 @@ neighbors(Node) ->
     % {N, S, E, W}
     case Row < 9 of
 	true ->
-	    N = Col ++ integer_to_list(Row + 1);
+	    N = Col ++ integer_to_list(Row - 1);
 	false ->
 	    N = nil
     end,
     case Row > 1 of
 	true ->
-	    S = Col ++ integer_to_list(Row - 1);
+	    S = Col ++ integer_to_list(Row + 1);
 	false ->
 	    S = nil
     end,
