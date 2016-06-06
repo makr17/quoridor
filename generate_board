@@ -1,0 +1,49 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+my @columns = ('a'..'i');
+my @rows    = (1..9);
+my %column_neighbors;
+for (my $i = 0; $i <=$#columns; $i++) {
+  push @{$column_neighbors{$columns[$i]}}, $columns[$i-1] if $i > 0;
+  push @{$column_neighbors{$columns[$i]}}, $columns[$i+1] if $i < $#columns;
+}
+
+my @vertices;
+my %edges;
+foreach my $col (@columns) {
+  foreach my $row (@rows) {
+    my $vertex = vertex($row, $col);
+    push @vertices, $vertex;
+    foreach my $n (@{$column_neighbors{$col}}) {
+      add_edge(\%edges, $vertex, vertex($row, $n));
+    }
+    if ($row < 9) {
+      add_edge(\%edges, $vertex, vertex($row + 1, $col));
+    }
+  }
+}
+
+print scalar @vertices, ' ', scalar keys %edges, " undirected d\n";
+print join(' ', @vertices), "\n";
+foreach my $edge (sort { $a->[0] cmp $b->[0] } values %edges) {
+  print join(' ', @$edge), " 1\n"
+}
+
+exit;
+
+sub vertex {
+  my($x, $y) = @_;
+  return $y.$x;
+}
+
+sub add_edge {
+  my $edges = shift;
+  my $a     = shift;
+  my $b     = shift;
+  my @edge = sort($a, $b);
+  my $key = join('', @edge);
+  $edges{$key} = \@edge;
+}
