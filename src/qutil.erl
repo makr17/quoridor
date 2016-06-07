@@ -1,5 +1,17 @@
 -module('qutil').
--export([valid_move/3, valid_wall/3, add_wall/3, wall_nodes/1, neighbors/1]).
+-export([valid_move/3, valid_wall/2, add_wall/2, wall_nodes/1, neighbors/1, reachable_neighbors/2, render_board/1]).
+
+-record(board,
+ {
+  graph,
+  p1,
+  p2,
+  p1walls,
+  p2walls,
+  existing,
+  moves,
+  cell_walls
+ }).
 
 valid_move(B, From, To) ->
     M = [N || {N, {1, _Path}} <- dijkstra:run(B, From), N == To],
@@ -10,20 +22,17 @@ valid_move(B, From, To) ->
 	    false
     end.
 
-% TODO: need to check for crossing walls
-%       e.g. e3h and e3v form an impossible "plus"
-%       naive search of remaining edges doesn't catch this
-valid_wall(B, Walls, Wall) ->
+valid_wall(B, Wall) ->
     NW = string:left(Wall, 2),
     Orient = string:right(Wall, 1),
     Nodes = wall_nodes(NW),
     SortedNodes = lists:sort(Nodes),
-    Conflict = [W || W <- Walls, W == SortedNodes],
+    Conflict = [W || W <- B#board.existing, W == SortedNodes],
     case Conflict of
 	[] ->
 	    io:format("Wall ~s affects cells ~p~n", [Wall, Nodes]),
 	    [_, SW, NE, SE] = Nodes,
-	    Edges = graph:edges(B),
+	    Edges = graph:edges(B#board.graph),
 	    case Orient of
 		"h" ->
   		    % check for vertical edges, NW <-> SW and NE <-> SE
@@ -44,29 +53,53 @@ valid_wall(B, Walls, Wall) ->
 	    {invalid, DelEdges}
     end.
 
-add_wall(B, Walls, Wall) ->
+add_wall(B, Wall) ->
     NW = string:left(Wall, 2),
-    {Valid, Edges} = valid_wall(B, Walls, Wall),
+    {Valid, Edges} = valid_wall(B, Wall),
     case Valid of
 	valid ->
 	    io:format("removing edges ~p~n", [Edges]),
 	    [del_edges(B, E) || E <- Edges],
+	    % won't work, we need to recurse with NewB out the top
+	    NewB = annotate_cell_walls(B, Edges),
+	    % TODO: sort might be unneccessary; NW, SW, NE, SE should be already sorted
 	    Nodes = lists:sort(wall_nodes(NW)),
 	    % add wall nodes to Walls list for later invalidation
-	    {valid, B, [Nodes|Walls]};
+	    % TODO: sufficient to just track NW node?  maybe?
+	    Walls = NewB#board.existing,
+	    NewerB = NewB#board{existing=[Nodes|Walls]},
+	    {valid, NewerB};
 	invalid ->
 	    {invalid, B}
     end.
 
 del_edges(B, {N1, N2}) ->	    
-    graph:del_edge(B, {N1, N2}),
-    graph:del_edge(B, {N2, N1}).
+    graph:del_edge(B#board.graph, {N1, N2}),
+    graph:del_edge(B#board.graph, {N2, N1}).
+
+annotate_cell_walls(B, []) ->
+    B;
+annotate_cell_walls(B, Edges) ->
+    [{N1, N2}|Rest] = Edges,
+    [Lead|Tail] = lists:sort([N1, N2]),
+    [Follow] = Tail,
+    {_N, S, E, _W} = neighbors(Lead),
+    if E == Follow ->
+	    {Other, _} = maps:get(Lead, B#board.cell_walls, {nil, nil}),
+	    NewMap = maps:put(Lead, {Other, "|"}, B#board.cell_walls),
+	    annotate_cell_walls(B#board{cell_walls = NewMap}, Rest);
+       S == Follow ->
+	    {_, Other} = maps:get(Lead, B#board.cell_walls, {nil, nil}),
+	    NewMap = maps:put(Lead, {"-", Other}, B#board.cell_walls),
+	    annotate_cell_walls(B#board{cell_walls = NewMap}, Rest)
+    end.
 
 wall_nodes(NW) ->
     {_, SW, NE, _} = neighbors(NW),
     {_, SE, _, _} = neighbors(NE),
     [NW, SW, NE, SE].
 
+% N, S, E, W cells wrt to Node; regardless of reachability
 neighbors(Node) ->
     Col = string:left(Node, 1),
     {Row, _} = string:to_integer(string:right(Node, 1)),
@@ -100,3 +133,55 @@ neighbors(Node) ->
 	    W = nil
     end,
     {N, S, E, W}.
+
+% reachable neighbors from Node, in no particular order
+reachable_neighbors(B, Node) ->
+    Edges = graph:edges(B#board.graph),
+    lists:append([N || {N, C} <- Edges, C == Node], [N || {C, N} <- Edges, C == Node]).
+
+render_board(B) ->
+    io:format("  a b c d e f g h i~n"),
+    [render_row(B, Idx) || Idx <- lists:seq(1, 9)].
+
+render_row(B, Row) ->
+    Mask = "abcdefghi",
+    Sep =  lists:flatten([" +" | [render_sep(B, Row,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
+    Text = lists:flatten([integer_to_list(Row) ++ "|" | [render_cell(B, Row, string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
+    case Row of
+	1 ->
+	    io:format("~s~n~s~n~s~n", [Sep, Text, Sep]);
+	_ ->
+	    io:format("~s~n~s~n", [Text, Sep])
+    end.    
+
+render_cell(B, Row, Col) ->
+    % colors
+    %   red (player 2):  FF0000
+    %   blue (player 1): 0000FF
+    %   brown (walls):   422518
+    Cell = Col ++ integer_to_list(Row),
+    {_S, E} = maps:get(Cell, B#board.cell_walls, {nil, nil}),
+    case E of
+	nil ->
+	    Pipe = "|";
+	"|" ->
+	    Pipe = color:true("422518", "|")
+    end,
+    if B#board.p1 =:= Cell ->
+	    [color:true("0000FF", "1"), Pipe];  % Blue
+       B#board.p2 =:= Cell ->
+	    [color:true("FF0000", "2"), Pipe];  % Red
+       true ->
+	    [" ", Pipe]                         % empty
+    end.
+
+render_sep(B, Row, Col) ->
+    Cell = Col ++ integer_to_list(Row),
+    {S, _E} = maps:get(Cell, B#board.cell_walls, {nil, nil}),
+    case S of
+	nil ->
+	    Dash = "-";
+	"-" ->
+	    Dash = color:true("422518", "=")   % Brown
+    end,
+    [Dash, "+"].

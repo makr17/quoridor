@@ -3,57 +3,76 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
 -export([board/0]).
 
+-record(board,
+ {
+  graph,
+  p1,
+  p2,
+  p1walls,
+  p2walls,
+  existing,
+  moves,
+  cell_walls
+ }).
+
 % external interface
 
 % gen_server functions
 init([]) ->
     B = board(),
-    P1 = "e9",
-    P2 = "e1",
-    WallCounts = {8, 8},
-    ExistingWalls = [], % TODO: something more efficient than a list?
-    Moves = [],
-    {ok, {{P1, P2}, B, WallCounts, ExistingWalls, Moves}}.
+    {ok, B}.
 
-handle_call({Player, move, Move}, _From, State) ->
-    {{P1, P2}, B, WallCounts, ExistingWalls, Moves} = State,
+% TODO: handle opponent adjacency
+%       remove edge to opponent node
+%       add edges from new node to opponent adjacent nodes
+%       cache del/add so we can reverse once move has been made
+handle_call({Player, move, Move}, _From, B) ->
     case Player of
 	"P1" ->
-	    case qutil:valid_move(B, P1, Move) of
+	    case qutil:valid_move(B, B#board.p1, Move) of
 		true ->
-		    {reply, valid, {{Move, P2}, B, WallCounts, ExistingWalls, [Move|Moves]}};
+		    Moves = B#board.moves,
+		    NewB = B#board{moves = [Move|Moves], p1 = Move},
+		    {reply, valid, NewB};
 		false ->
-		    {reply, invalid, State}
+		    {reply, invalid, B}
 	    end;
 	"P2" ->
-	    case qutil:valid_move(B, P2, Move) of
+	    case qutil:valid_move(B, B#board.p2, Move) of
 		true ->
-		    {reply, valid, {{P1, Move}, B, WallCounts, ExistingWalls, [Move|Moves]}};
+		    Moves = B#board.moves,
+		    NewB = B#board{moves = [Move|Moves], p2 = Move},
+		    {reply, valid, NewB};
 		false ->
-		    {reply, invalid, State}
+		    {reply, invalid, B}
 	    end	
     end;
-handle_call({Player, wall, Wall}, _From, State) ->
-    {Players, B, {P1w, P2w}, ExistingWalls, Moves} = State,
-    {Valid, NewB} = qutil:valid_wall(B, ExistingWalls, Wall),
+handle_call({Player, wall, Wall}, _From, B) ->
+    {Valid, NewB} = qutil:valid_wall(B, Wall),
     case Player of
 	"P1" ->
 	    if
-		P1w =:= 0 ->
-		    {reply, no_walls, State};
+		B#board.p1walls =:= 0 ->
+		    {reply, no_walls, B};
 		Valid =:= valid ->
-		    {reply, valid, {Players, NewB, {P1w - 1, P2w}, ExistingWalls, [Moves|Wall]}};
+		    P1w = NewB#board.p1walls - 1,
+		    Moves = NewB#board.moves,
+		    NewerB = NewB#board{p1walls = P1w, moves = [Wall|Moves]},
+		    {reply, valid, NewerB};
 		true ->
-		    {reply, invalid, State}
+		    {reply, invalid, B}
 	    end;
 	"P2" ->
 	    if
-		P2w =:= 0 ->
-		    {reply, no_walls, State};
+		B#board.p2walls =:= 0 ->
+		    {reply, no_walls, B};
 		Valid ->
-		    {reply, valid, {Players, NewB, {P1w, P2w - 1}, ExistingWalls, [Moves|Wall]}};
+		    P2w = NewB#board.p2walls - 1,
+		    Moves = NewB#board.moves,
+		    NewerB = NewB#board{p2walls = P2w, moves = [Wall|Moves]},
+		    {reply, valid, NewerB};
 		true ->
-		    {reply, invalid, State}
+		    {reply, invalid, B}
 	    end
     end;
 handle_call(terminate, _From, State) ->
@@ -89,5 +108,14 @@ board() ->
 		{ok, [V1, V2, W]} = io:fread(IO, ">", "~s ~s ~d"),
 		{V1, V2, W}
 	end,
-    graph:from_file(File, ReadVertices, ReadEdge).
+    #board{graph=graph:from_file(File, ReadVertices, ReadEdge),
+	   p1="e9",
+	   p2="e1",
+	   p1walls=10,
+	   p2walls=10,
+	   existing=[],  % TODO: something more efficient
+	   moves=[],
+	   cell_walls=maps:new()
+	  }.
+    
 
