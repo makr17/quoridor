@@ -3,18 +3,16 @@
 
 -record(board,
  {
-  graph,
-  p1,
-  p2,
-  p1walls,
-  p2walls,
-  existing,
-  moves,
-  cell_walls
+   graph,
+   positions,
+   walls,
+   existing,
+   moves,
+   cell_walls
  }).
 
 valid_move(B, From, To) ->
-    M = [N || {N, {1, _Path}} <- dijkstra:run(B, From), N == To],
+    M = [N || {N, {1, _Path}} <- dijkstra:run(B#board.graph, From), N == To],
     case M of
 	[To] ->
 	    true;
@@ -22,6 +20,7 @@ valid_move(B, From, To) ->
 	    false
     end.
 
+% TODO: test that both players have clear paths remaining after wall
 valid_wall(B, Wall) ->
     NW = string:left(Wall, 2),
     Orient = string:right(Wall, 1),
@@ -167,9 +166,9 @@ render_cell(B, Row, Col) ->
 	"|" ->
 	    Pipe = color:true("422518", "|")
     end,
-    if B#board.p1 =:= Cell ->
+    if array:get(1, B#board.positions) =:= Cell ->
 	    [color:true("0000FF", "1"), Pipe];  % Blue
-       B#board.p2 =:= Cell ->
+       array:get(2, B#board.positions) =:= Cell ->
 	    [color:true("FF0000", "2"), Pipe];  % Red
        true ->
 	    [" ", Pipe]                         % empty
