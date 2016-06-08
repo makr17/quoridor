@@ -144,13 +144,13 @@ render_board(B) ->
 
 render_row(B, Row) ->
     Mask = "abcdefghi",
-    Sep =  lists:flatten([" +" | [render_sep(B, Row,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
+    Sep =  lists:flatten([" ●" | [render_sep(B, Row,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
     Text = lists:flatten([integer_to_list(Row) ++ "|" | [render_cell(B, Row, string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
     case Row of
 	1 ->
-	    io:format("~s~n~s~n~s~n", [Sep, Text, Sep]);
+	    io:format("~ts~n~ts~n~ts~n", [Sep, Text, Sep]);
 	_ ->
-	    io:format("~s~n~s~n", [Text, Sep])
+	    io:format("~ts~n~ts~n", [Text, Sep])
     end.    
 
 render_cell(B, Row, Col) ->
@@ -164,11 +164,13 @@ render_cell(B, Row, Col) ->
 	nil ->
 	    Pipe = "|";
 	"|" ->
-	    Pipe = color:true("422518", "|")
+	    Pipe = color:true("422518", "‖")
     end,
-    if array:get(1, B#board.positions) =:= Cell ->
+    P1 = array:get(1, B#board.positions),
+    P2 = array:get(2, B#board.positions),
+    if P1 =:= Cell ->
 	    [color:true("0000FF", "1"), Pipe];  % Blue
-       array:get(2, B#board.positions) =:= Cell ->
+       P2 =:= Cell ->
 	    [color:true("FF0000", "2"), Pipe];  % Red
        true ->
 	    [" ", Pipe]                         % empty
@@ -183,4 +185,4 @@ render_sep(B, Row, Col) ->
 	"-" ->
 	    Dash = color:true("422518", "=")   % Brown
     end,
-    [Dash, "+"].
+    [Dash, "●"].

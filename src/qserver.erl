@@ -24,7 +24,7 @@ init([]) ->
 %       add edges from new node to opponent adjacent nodes
 %       cache del/add so we can reverse once move has been made
 handle_call({Player, move, Move}, _From, B) ->
-    Pos = array.get(Player, B#board.positions),
+    Pos = array:get(Player, B#board.positions),
     case qutil:valid_move(B, Pos, Move) of
 	true ->
 	    Moves = B#board.moves,
