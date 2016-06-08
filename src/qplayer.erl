@@ -23,7 +23,7 @@ score_board(B, Player) ->
     % TODO: stash in board if this becomes a burden
     Dests = {1, 9},
     Me = element(Player, B#board.positions),
-    [Opp] = [N || N <- array:to_list(B#board.positions), N =/= Me],
+    [Opp] = [N || N <- tuple_to_list(B#board.positions), N =/= Me],
     Dest = element(Player, Dests),
     MeBest = min_path(B, Me, Dest),
     [OppDest] = [N || N <- tuple_to_list(Dests), N =/= Dest],
@@ -34,6 +34,6 @@ score_board(B, Player) ->
     MeLen - OppLen.
 
 min_path(B, Pos, Dest) ->
-    Paths = [{N, {Len, Path}} || {N, {Len, Path}} <- dijkstra:run(B#board.graph, Pos), string:substr(2, 1, N) == Dest],
-    [Best|_Tail] = list:sort(fun({_,{L,_}}, {_,{R,_}}) -> L < R end, Paths),
+    Paths = [{N, {Len, Path}} || {N, {Len, Path}} <- dijkstra:run(B#board.graph, Pos), string:substr(N, 2, 1) == integer_to_list(Dest)],
+    [Best|_Tail] = lists:sort(fun({_,{L,_}}, {_,{R,_}}) -> L < R end, Paths),
     Best.
