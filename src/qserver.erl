@@ -24,11 +24,11 @@ init([]) ->
 %       add edges from new node to opponent adjacent nodes
 %       cache del/add so we can reverse once move has been made
 handle_call({Player, move, Move}, _From, B) ->
-    Pos = array:get(Player, B#board.positions),
+    Pos = element(Player, B#board.positions),
     case qutil:valid_move(B, Pos, Move) of
 	true ->
 	    Moves = B#board.moves,
-	    Positions = array:set(Player, Move, B#board.positions),
+	    Positions = setelement(Player, Move, B#board.positions),
 	    NewB = B#board{moves = [Move|Moves], positions = Positions},
 	    {reply, valid, NewB};
 	false ->
@@ -36,14 +36,14 @@ handle_call({Player, move, Move}, _From, B) ->
     end;
 handle_call({Player, wall, Wall}, _From, B) ->
     {Valid, NewB} = qutil:valid_wall(B, Wall),
-    Count = array:get(Player, B#board.walls),
+    Count = element(Player, B#board.walls),
     case Count of
 	0 ->
 	    {reply, no_walls, B};
 	_ ->
 	    case Valid of
 		valid ->
-		    Walls = array:set(Player, Count - 1, NewB#board.walls),
+		    Walls = setelement(Player, Count - 1, NewB#board.walls),
 		    Moves = NewB#board.moves,
 		    {reply, valid, NewB#board{walls = Walls, moves = [Wall|Moves]}};
 		invalid ->
@@ -84,8 +84,8 @@ board() ->
 		{V1, V2, W}
 	end,
     #board{graph=graph:from_file(File, ReadVertices, ReadEdge),
-	   positions = array:from_list(["e9", "e1"]),
-	   walls = array:from_list([10, 10]),
+	   positions = {"e9", "e1"},
+	   walls = {10, 10},
 	   existing=[],  % TODO: something more efficient
 	   moves=[],
 	   cell_walls=maps:new()

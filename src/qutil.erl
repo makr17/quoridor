@@ -166,8 +166,8 @@ render_cell(B, Row, Col) ->
 	"|" ->
 	    Pipe = color:true("422518", "‖")
     end,
-    P1 = array:get(1, B#board.positions),
-    P2 = array:get(2, B#board.positions),
+    P1 = element(1, B#board.positions),
+    P2 = element(2, B#board.positions),
     if P1 =:= Cell ->
 	    [color:true("0000FF", "1"), Pipe];  % Blue
        P2 =:= Cell ->
