@@ -1,5 +1,5 @@
 -module('qutil').
--export([valid_move/3, valid_wall/2, add_wall/2, wall_nodes/1, neighbors/1, reachable_neighbors/2, render_board/1]).
+-export([valid_move/3, valid_wall/2, add_wall/2, wall_nodes/1, neighbors/1, reachable_neighbors/2, render_board/1, min_path/3]).
 
 -record(board,
  {
@@ -186,3 +186,8 @@ render_sep(B, Row, Col) ->
 	    Dash = color:true("422518", "=")   % Brown
     end,
     [Dash, "●"].
+
+min_path(B, Pos, Dest) ->
+    Paths = [{N, {Len, Path}} || {N, {Len, Path}} <- dijkstra:run(B#board.graph, Pos), string:substr(N, 2, 1) == integer_to_list(Dest)],
+    [Best|_Tail] = lists:sort(fun({_,{L,_}}, {_,{R,_}}) -> L < R end, Paths),
+    Best.
