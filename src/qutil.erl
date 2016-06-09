@@ -21,6 +21,8 @@ valid_move(B, From, To) ->
     end.
 
 % TODO: test that both players have clear paths remaining after wall
+%       does a path exists to victory that doesn't traverse either of DelEdges?
+%       want to be able to test without actually removing the edges
 valid_wall(B, Wall) ->
     NW = string:left(Wall, 2),
     Orient = string:right(Wall, 1),
@@ -40,16 +42,15 @@ valid_wall(B, Wall) ->
 	            % check for horizontal edges, NW <-> NE and SW <-> SE
 		    DelEdges = [E || E <- Edges, E == {NW, NE} orelse E == {NE, NW} orelse E == {SW, SE} orelse E == {SW, SE}]
 	    end,
-	    io:format("~p wall bisects existing edges ~p~n", [Wall, DelEdges]);
+	    if length(DelEdges) =:= 2 ->
+		    io:format("~p wall bisects existing edges ~p~n", [Wall, DelEdges]),
+		    {valid, DelEdges};
+	       true ->
+		    {invalid, []}
+	    end;
 	_ ->
 	    % invalid, crossing wall already exists
-	    DelEdges = []
-    end,
-    case length(DelEdges) == 2 of
-	true ->
-	    {valid, DelEdges};
-	false ->
-	    {invalid, DelEdges}
+	    {invalid, []}
     end.
 
 add_wall(B, Wall) ->
@@ -107,15 +108,15 @@ neighbors(Node) ->
     % {N, S, E, W}
     case Row < 9 of
 	true ->
-	    N = Col ++ integer_to_list(Row - 1);
-	false ->
-	    N = nil
-    end,
-    case Row > 1 of
-	true ->
 	    S = Col ++ integer_to_list(Row + 1);
 	false ->
 	    S = nil
+    end,
+    case Row > 1 of
+	true ->
+	    N = Col ++ integer_to_list(Row - 1);
+	false ->
+	    N = nil
     end,
     case ColIndex < 9 of
 	true ->
