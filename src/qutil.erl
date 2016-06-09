@@ -1,5 +1,5 @@
 -module('qutil').
--export([valid_move/3, valid_wall/2, add_wall/3, wall_nodes/1, neighbors/1, reachable_neighbors/2, render_board/1, min_path/3]).
+-export([valid_move/3, valid_wall/2, add_wall/3, wall_nodes/1, neighbors/1, reachable_neighbors/2, print_board/1, render_board/1, min_path/3]).
 
 -record(board,
  {
@@ -136,9 +136,14 @@ reachable_neighbors(B, Node) ->
     Edges = graph:edges(B#board.graph),
     lists:append([N || {N, C} <- Edges, C == Node], [N || {C, N} <- Edges, C == Node]).
 
+print_board(B) ->
+    Rendered = render_board(B),
+    io:format("~ts", [Rendered]).
+
 render_board(B) ->
-    io:format("  a b c d e f g h i~n"),
-    [render_row(B, Idx) || Idx <- lists:seq(1, 9)].
+    ColHeader = io_lib:format("  a b c d e f g h i~n", []),
+    Board = lists:flatten([render_row(B, Idx) || Idx <- lists:seq(1, 9)]),
+    io_lib:format("~ts~ts", [ColHeader, Board]).
 
 render_row(B, Row) ->
     Mask = "abcdefghi",
@@ -147,9 +152,9 @@ render_row(B, Row) ->
     case Row of
 	1 ->
 	    EmptySep = lists:flatten([" ●" | [render_sep(B, 0,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
-	    io:format("~ts~n~ts~n~ts~n", [EmptySep, Text, Sep]);
+	    io_lib:format("~ts~n~ts~n~ts~n", [EmptySep, Text, Sep]);
 	_ ->
-	    io:format("~ts~n~ts~n", [Text, Sep])
+	    io_lib:format("~ts~n~ts~n", [Text, Sep])
     end.    
 
 render_cell(B, Row, Col) ->
