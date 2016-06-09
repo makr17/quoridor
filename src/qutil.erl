@@ -38,7 +38,7 @@ valid_wall(B, Wall) ->
 		    DelEdges = [E || E <- Edges, E == {NW, SW} orelse E == {SW, NW} orelse E == {NE, SE} orelse E == {SE, NE}];
 		"v" ->
 	            % check for horizontal edges, NW <-> NE and SW <-> SE
-		    DelEdges = [E || E <- Edges, E == {NW, NE} orelse E == {NE, NW} orelse E == {SW, SE} orelse E == {SW, SE}]
+		    DelEdges = [E || E <- Edges, E == {NW, NE} orelse E == {NE, NW} orelse E == {SW, SE} orelse E == {SE, SW}]
 	    end,
 	    if length(DelEdges) =:= 2 ->
 		    {valid, DelEdges};
