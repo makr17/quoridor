@@ -29,6 +29,7 @@ test_valid_walls(B) ->
 test_valid_walls(B, _Validity, []) ->
     B;
 test_valid_walls(B, Validity, [Wall|Walls]) ->
+    io:format("testing ~p wall ~s~n", [Validity, Wall]),
     {Validity, _} = qutil:valid_wall(B, Wall),
     test_valid_walls(B, Validity, Walls).
 
@@ -43,5 +44,7 @@ test_add_walls(B) ->
 test_add_walls(B, _Validity, []) ->
     B;
 test_add_walls(B, Validity, [Wall|Walls]) ->
-    {Validity, B1} = qutil:add_wall(B, Wall),
+    io:format("adding ~p wall ~s~n", [Validity, Wall]),
+    % player 1...  I suppose I should test with player 2 as well
+    {Validity, B1} = qutil:add_wall(B, 1, Wall),
     test_add_walls(B1, Validity, Walls).
