@@ -146,7 +146,8 @@ render_row(B, Row) ->
     Text = lists:flatten([integer_to_list(Row) ++ "|" | [render_cell(B, Row, string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
     case Row of
 	1 ->
-	    io:format("~ts~n~ts~n~ts~n", [Sep, Text, Sep]);
+	    EmptySep = lists:flatten([" ●" | [render_sep(B, 0,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
+	    io:format("~ts~n~ts~n~ts~n", [EmptySep, Text, Sep]);
 	_ ->
 	    io:format("~ts~n~ts~n", [Text, Sep])
     end.    
