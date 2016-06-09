@@ -147,11 +147,11 @@ render_board(B) ->
 
 render_row(B, Row) ->
     Mask = "abcdefghi",
-    Sep =  lists:flatten([" ●" | [render_sep(B, Row,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
+    Sep =  lists:flatten([" " ++ dot() | [render_sep(B, Row,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
     Text = lists:flatten([integer_to_list(Row) ++ "|" | [render_cell(B, Row, string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
     case Row of
 	1 ->
-	    EmptySep = lists:flatten([" ●" | [render_sep(B, 0,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
+	    EmptySep = lists:flatten([" " ++ dot() | [render_sep(B, 0,  string:substr(Mask, Idx, 1)) || Idx <- lists:seq(1, 9)]]),
 	    io_lib:format("~ts~n~ts~n~ts~n", [EmptySep, Text, Sep]);
 	_ ->
 	    io_lib:format("~ts~n~ts~n", [Text, Sep])
@@ -168,7 +168,7 @@ render_cell(B, Row, Col) ->
 	nil ->
 	    Pipe = "|";
 	"|" ->
-	    Pipe = color:true("422518", "‖")
+	    Pipe = vwall()
     end,
     P1 = element(1, B#board.positions),
     P2 = element(2, B#board.positions),
@@ -187,9 +187,21 @@ render_sep(B, Row, Col) ->
 	nil ->
 	    Dash = "-";
 	"-" ->
-	    Dash = color:true("422518", "=")   % Brown
+	    Dash = hwall()   % Brown
     end,
-    [Dash, "●"].
+    [Dash, dot()].
+
+dot() ->
+    % light grey
+    color:true("BBBBBB", "●").
+
+vwall() ->
+    % deep brown
+    color:true("422518", "‖").
+
+hwall() ->
+    % deep brown
+    color:true("422518", "=").
 
 min_path(B, Pos, Dest) ->
     Paths = [{N, {Len, Path}} || {N, {Len, Path}} <- dijkstra:run(B#board.graph, Pos), string:substr(N, 2, 1) == integer_to_list(Dest)],
