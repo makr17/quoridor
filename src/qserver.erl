@@ -36,16 +36,16 @@ handle_call({Player, move, Move}, _From, B) ->
     end;
 handle_call({Player, wall, Wall}, _From, B) ->
     {Valid, NewB} = qutil:valid_wall(B, Wall),
-    Count = element(Player, B#board.walls),
+    Count = element(Player, NewB#board.walls),
     case Count of
 	0 ->
-	    {reply, no_walls, B};
+	    {reply, no_walls, NewB};
 	_ ->
 	    case Valid of
 		valid ->
-		    Walls = setelement(Player, Count - 1, NewB#board.walls),
-		    Moves = NewB#board.moves,
-		    {reply, valid, NewB#board{walls = Walls, moves = [Wall|Moves]}};
+		    {Valid, NewerB} = qutil:valid_wall(NewB, Wall),
+		    Moves = NewerB#board.moves,
+		    {reply, valid, NewerB#board{moves = [Wall|Moves]}};
 		invalid ->
 		    {reply, invalid, B}
 	    end

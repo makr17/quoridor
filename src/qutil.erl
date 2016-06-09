@@ -1,5 +1,5 @@
 -module('qutil').
--export([valid_move/3, valid_wall/2, add_wall/2, wall_nodes/1, neighbors/1, reachable_neighbors/2, render_board/1, min_path/3]).
+-export([valid_move/3, valid_wall/2, add_wall/3, wall_nodes/1, neighbors/1, reachable_neighbors/2, render_board/1, min_path/3]).
 
 -record(board,
  {
@@ -27,11 +27,9 @@ valid_wall(B, Wall) ->
     NW = string:left(Wall, 2),
     Orient = string:right(Wall, 1),
     Nodes = wall_nodes(NW),
-    SortedNodes = lists:sort(Nodes),
-    Conflict = [W || W <- B#board.existing, W == SortedNodes],
+    Conflict = [W || W <- B#board.existing, W =:= NW],
     case Conflict of
 	[] ->
-	    io:format("Wall ~s affects cells ~p~n", [Wall, Nodes]),
 	    [_, SW, NE, SE] = Nodes,
 	    Edges = graph:edges(B#board.graph),
 	    case Orient of
@@ -43,7 +41,6 @@ valid_wall(B, Wall) ->
 		    DelEdges = [E || E <- Edges, E == {NW, NE} orelse E == {NE, NW} orelse E == {SW, SE} orelse E == {SW, SE}]
 	    end,
 	    if length(DelEdges) =:= 2 ->
-		    io:format("~p wall bisects existing edges ~p~n", [Wall, DelEdges]),
 		    {valid, DelEdges};
 	       true ->
 		    {invalid, []}
@@ -53,29 +50,29 @@ valid_wall(B, Wall) ->
 	    {invalid, []}
     end.
 
-add_wall(B, Wall) ->
+add_wall(B, Player, Wall) ->
     NW = string:left(Wall, 2),
     {Valid, Edges} = valid_wall(B, Wall),
     case Valid of
 	valid ->
-	    io:format("removing edges ~p~n", [Edges]),
-	    [del_edges(B, E) || E <- Edges],
-	    % won't work, we need to recurse with NewB out the top
-	    NewB = annotate_cell_walls(B, Edges),
-	    % TODO: sort might be unneccessary; NW, SW, NE, SE should be already sorted
-	    Nodes = lists:sort(wall_nodes(NW)),
-	    % add wall nodes to Walls list for later invalidation
-	    % TODO: sufficient to just track NW node?  maybe?
-	    Walls = NewB#board.existing,
-	    NewerB = NewB#board{existing=[Nodes|Walls]},
-	    {valid, NewerB};
+	    NewB = del_edges(B, Edges),
+	    NewerB = annotate_cell_walls(NewB, Edges),
+	    Walls = setelement(Player,
+			       NewerB#board.walls,
+			       element(Player, NewerB#board.walls) - 1),
+	    % add NW wall node to Walls list for later invalidation
+	    Existing = NewerB#board.existing,
+	    {valid, NewerB#board{existing=[NW|Existing], walls=Walls}};
 	invalid ->
 	    {invalid, B}
     end.
 
-del_edges(B, {N1, N2}) ->	    
+del_edges(B, []) ->
+    B;
+del_edges(B, [{N1, N2}|Walls]) ->	    
     graph:del_edge(B#board.graph, {N1, N2}),
-    graph:del_edge(B#board.graph, {N2, N1}).
+    graph:del_edge(B#board.graph, {N2, N1}),
+    del_edges(B, Walls).
 
 annotate_cell_walls(B, []) ->
     B;
