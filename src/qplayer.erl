@@ -54,4 +54,4 @@ score_board(B, Player) ->
     {_, {MeLen, _}} = MeBest,
     {_, {OppLen, _}} = OppBest,
     % TODO: factor in value of remaining walls?
-    MeLen - OppLen.
+    {OppLen - MeLen, MeBest, OppBest}.
