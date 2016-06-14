@@ -49,7 +49,7 @@ handle_call({Player, Wall}, _From, B) when length(Wall) == 3 ->
 	    end
     end;
 handle_call(board, _From, B) ->
-    {reply, {valid, B}};
+    {reply, {valid, B}, B};
 handle_call(terminate, _From, State) ->
     {stop, normal, ok, State}.
 
