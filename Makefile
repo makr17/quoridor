@@ -27,3 +27,6 @@ src_target: $(SRC)/*.erl
 
 clean:
 	$(RM) $(EBIN)/*.beam
+
+shell:
+	erl -pa $(EBIN)
