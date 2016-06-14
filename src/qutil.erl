@@ -73,10 +73,10 @@ add_wall(B, Player, Wall) ->
 
 del_edges(B, []) ->
     B;
-del_edges(B, [{N1, N2}|Walls]) ->	    
+del_edges(B, [{N1, N2}|Edges]) ->	    
     graph:del_edge(B#board.graph, {N1, N2}),
     graph:del_edge(B#board.graph, {N2, N1}),
-    del_edges(B, Walls).
+    del_edges(B, Edges).
 
 annotate_cell_walls(B, []) ->
     B;

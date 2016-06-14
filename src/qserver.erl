@@ -1,7 +1,7 @@
 -module('qserver').
--behaviour('gen_server').
+-behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
--export([board/0]).
+-export([start_link/0, board/1, move/2, done/1]).
 
 -record(board,
  {
@@ -17,39 +17,39 @@
 
 % gen_server functions
 init([]) ->
-    {ok, board()}.
+    {ok, new_board()}.
 
 % TODO: handle opponent adjacency
 %       remove edge to opponent node
 %       add edges from new node to opponent adjacent nodes
 %       cache del/add so we can reverse once move has been made
-handle_call({Player, move, Move}, _From, B) ->
+handle_call({Player, Move}, _From, B) when length(Move) == 2 ->
     Pos = element(Player, B#board.positions),
-    case qutil:valid_move(B, Pos, Move) of
+    Valid = qutil:valid_move(B, Pos, Move),
+    case Valid of
 	true ->
 	    Moves = B#board.moves,
-	    Positions = setelement(Player, Move, B#board.positions),
+	    Positions = setelement(Player, B#board.positions, Move),
 	    NewB = B#board{moves = [Move|Moves], positions = Positions},
-	    {reply, valid, NewB};
+	    {reply, {valid, NewB}, NewB};
 	false ->
-	    {reply, invalid, B}
+	    {reply, {invalid, B}, B}
     end;
-handle_call({Player, wall, Wall}, _From, B) ->
-    {Valid, NewB} = qutil:valid_wall(B, Wall),
-    Count = element(Player, NewB#board.walls),
-    case Count of
+handle_call({Player, Wall}, _From, B) when length(Wall) == 3 ->
+    case element(Player, B#board.walls) of
 	0 ->
-	    {reply, no_walls, NewB};
+	    {reply, {no_walls, B}, B};
 	_ ->
-	    case Valid of
-		valid ->
-		    {Valid, NewerB} = qutil:valid_wall(NewB, Wall),
-		    Moves = NewerB#board.moves,
-		    {reply, valid, NewerB#board{moves = [Wall|Moves]}};
-		invalid ->
-		    {reply, invalid, B}
+	    case qutil:add_wall(B, Player, Wall) of
+		{valid, NewB} ->
+		    NewerB = NewB#board{moves = [Wall|NewB#board.moves]},
+		    {reply, {valid, NewerB}, NewerB};
+		{invalid, NewB} ->
+		    {reply, {invalid, NewB}, NewB}
 	    end
     end;
+handle_call(board, _From, B) ->
+    {reply, {valid, B}};
 handle_call(terminate, _From, State) ->
     {stop, normal, ok, State}.
 
@@ -66,11 +66,23 @@ terminate(normal, _State) ->
 
 code_change(_OldV, State, _Extra) ->
     {ok, State}.
-    
+
+% external functions    
+start_link() ->
+    gen_server:start_link(?MODULE, [], []).
+
+move(Pid, Move) ->
+    gen_server:call(Pid, Move).
+
+board(Pid) ->
+    gen_server:call(Pid, board).
+
+done(Pid) ->
+    gen_server:call(Pid, terminate).
 
 % internal functions
 % read empty board graph from file
-board() ->
+new_board() ->
     File = ?Q_DATA ++ "/empty_board.txt",
     ReadVertices =
 	fun(IO, _N) -> 
@@ -90,5 +102,4 @@ board() ->
 	   moves=[],
 	   cell_walls=maps:new()
 	  }.
-    
 
