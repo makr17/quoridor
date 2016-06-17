@@ -20,7 +20,7 @@ color_target: erlang-color/src/*.erl
 
 #src_target: $(SRC_MODULES:%=$(EBIN)/%.beam)
 src_target: $(SRC)/*.erl
-	$(ERLC) $(ERLC_FLAGS) $(ERLC_MACROS) -o $(EBIN) $(SRC)/*.erl
+	$(ERLC) $(ERLC_FLAGS) $(ERLC_MACROS) -I $(TOP)/include -o $(EBIN) $(SRC)/*.erl
 
 #$(EBIN)/%.beam: $(SRC)/%.erl
 #	$(ERLC) $(ERLC_FLAGS) $(ERLC_MACROS) -o $(EBIN) $<

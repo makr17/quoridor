@@ -1,0 +1,10 @@
+-record(board,
+ {
+   graph,
+   positions,
+   walls,
+   existing,
+   moves,
+   cell_walls,
+   subscribers
+ }).

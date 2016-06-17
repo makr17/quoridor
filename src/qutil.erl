@@ -1,15 +1,7 @@
 -module('qutil').
 -export([valid_move/3, valid_wall/2, add_wall/3, wall_nodes/1, neighbors/1, reachable_neighbors/2, print_board/1, render_board/1, min_path/3]).
 
--record(board,
- {
-   graph,
-   positions,
-   walls,
-   existing,
-   moves,
-   cell_walls
- }).
+-include("board.hrl").
 
 -define(dot, color:true("BBBBBB", "●")).
 -define(vwall, color:true("422518", "‖")).

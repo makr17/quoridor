@@ -1,16 +1,17 @@
 -module('qplayer').
 
--export([valid_moves/2, valid_walls/1, score_board/2]).
+-export([configure/3, start_play/2, valid_moves/2, valid_walls/1, score_board/2, update/4, make_move/4]).
 
--record(board,
- {
-   graph,
-   positions,
-   walls,
-   existing,
-   moves,
-   cell_walls
- }).
+-include("board.hrl").
+
+configure(Pid, ServerPid, Player) ->
+    gen_server:call(Pid, {configure, ServerPid, Player}).
+
+start_play(ServerPid, PlayerPid) ->
+    {valid, B} = qserver:board(ServerPid),
+    % fake move from player 0
+    % send it to player 1 and they should proceed to pick a move
+    gen_server:cast(PlayerPid, {move, B, 0, ""}).
 
 valid_moves(B, Player) ->
     Pos = element(Player, B#board.positions),
@@ -55,3 +56,24 @@ score_board(B, Player) ->
     {_, {OppLen, _}} = OppBest,
     % TODO: factor in value of remaining walls?
     {OppLen - MeLen, MeBest, OppBest}.
+
+update(Pid, B, Player, Move) ->
+    gen_server:cast(Pid, {move, B, Player, Move}).
+
+make_move(ServerPid, PlayerPid, Player, B) ->
+    make_move(ServerPid, PlayerPid, Player, B, sets:new()).
+
+make_move(ServerPid, PlayerPid, Player, B, Bad) ->
+    {ok, Move} = gen_server:call(PlayerPid, {pick_move, Player, B, Bad}),
+    case qserver:move(ServerPid, {Player, Move}) of
+	{valid, _} ->
+	    ok;
+	{invalid, NewB} ->
+	    make_move(
+	      ServerPid,
+	      PlayerPid,
+	      Player,
+	      NewB,
+	      sets:add_element(Move, Bad)
+	     )
+    end.

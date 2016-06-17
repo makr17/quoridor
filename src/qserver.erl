@@ -1,17 +1,9 @@
 -module('qserver').
 -behaviour(gen_server).
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, code_change/3, terminate/2]).
--export([start_link/0, board/1, move/2, done/1]).
+-export([start_link/0, subscribe/1, board/1, move/2, done/1]).
 
--record(board,
- {
-   graph,
-   positions,
-   walls,
-   existing,
-   moves,
-   cell_walls
- }).
+-include("board.hrl").
 
 % external interface
 
@@ -31,6 +23,7 @@ handle_call({Player, Move}, _From, B) when length(Move) == 2 ->
 	    Moves = B#board.moves,
 	    Positions = setelement(Player, B#board.positions, Move),
 	    NewB = B#board{moves = [Move|Moves], positions = Positions},
+	    notify_subscribers(Player, Move, NewB),
 	    {reply, {valid, NewB}, NewB};
 	false ->
 	    {reply, {invalid, B}, B}
@@ -43,6 +36,7 @@ handle_call({Player, Wall}, _From, B) when length(Wall) == 3 ->
 	    case qutil:add_wall(B, Player, Wall) of
 		{valid, NewB} ->
 		    NewerB = NewB#board{moves = [Wall|NewB#board.moves]},
+		    notify_subscribers(Player, Wall, NewerB),
 		    {reply, {valid, NewerB}, NewerB};
 		{invalid, NewB} ->
 		    {reply, {invalid, NewB}, NewB}
@@ -53,6 +47,9 @@ handle_call(board, _From, B) ->
 handle_call(terminate, _From, State) ->
     {stop, normal, ok, State}.
 
+handle_cast({subscribe, From}, B) ->
+    Subs = B#board.subscribers,
+    {noreply, B#board{subscribers = [From|Subs]}};
 handle_cast(Msg, State) ->
     io:format("Unexpected message: ~p~n",[Msg]),
     {noreply, State}.
@@ -70,6 +67,9 @@ code_change(_OldV, State, _Extra) ->
 % external functions    
 start_link() ->
     gen_server:start_link(?MODULE, [], []).
+
+subscribe(Pid) ->
+    gen_server:cast(Pid, {subscribe, self()}).
 
 move(Pid, Move) ->
     gen_server:call(Pid, Move).
@@ -100,6 +100,15 @@ new_board() ->
 	   walls = {10, 10},
 	   existing=[],  % TODO: something more efficient
 	   moves=[],
-	   cell_walls=maps:new()
+	   cell_walls=maps:new(),
+	   subscribers=[]
 	  }.
 
+notify_subscribers(Player, Move, B) ->
+    Subs = B#board.subscribers,
+    notify_subscribers(Player, Move, B, Subs).
+
+notify_subscribers(_, _, B, []) ->
+    B;
+notify_subscribers(Player, Move, B, [Sub|_Tail]) ->
+    qplayer:update(Sub, B, Player, Move).
